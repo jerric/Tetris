@@ -10,4 +10,11 @@ public class GameStats {
     public int shapesPlaced;
     public int rowsRemoved;
     public int score;
+
+    public void reset() {
+        status = Status.NotStarted;
+        shapesPlaced = 0;
+        rowsRemoved = 0;
+        score = 0;
+    }
 }

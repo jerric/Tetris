@@ -26,20 +26,35 @@ public class Board {
   }
 
   private final int width;
+  private final int height;
   private final Row headRow;
 
   public Board(int width, int height) {
     this.width = width;
+    this.height = height;
     this.headRow = new Row(0);
     addRows(height);
   }
 
+  public void reset() {
+    headRow.next = null;
+    addRows(height);
+  }
+
+  public int getWidth() {
+    return width;
+  }
+
   public boolean isConflict(Shape shape, Point origin) {
     Point[] blocks = shape.getBlocks(origin);
-    int y = 0;
-    for (Row row = headRow.next; row != null; row = row.next, y++) {
-      for (Point block : blocks) {
-        if (block.y == y && row.blocks[block.x] != null) return true;
+    for (Point block : blocks) {
+      if (block.x < 0 || block.x >= width || block.y < 0 || block.y >= height) return true;
+      int y = 0;
+      for (Row row = headRow.next; row != null; row = row.next, y++) {
+        if (block.y == y) {
+          if (row.blocks[block.x] != null) return true;
+          break;
+        }
       }
     }
     return false;
