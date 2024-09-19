@@ -14,7 +14,7 @@ public class ShapeT extends Shape {
 
   @Override
   public Color getColor() {
-    return Color.BLUE;
+    return new Color(0xA020F0);
   }
 
   @Override

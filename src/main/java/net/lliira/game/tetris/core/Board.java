@@ -9,13 +9,21 @@ public class Board {
   private static final Color FULL_ROW_COLOR = Color.WHITE;
   private static final Color FAILED_COLOR = Color.WHITE;
 
-  private static class Row {
+  public static class Row {
     private final Color[] blocks;
     private int count = 0;
     private Row next = null;
 
     Row(int width) {
       blocks = new Color[width];
+    }
+
+    public Color[] getBlocks() {
+      return blocks;
+    }
+
+    public Row getNext() {
+      return next;
     }
 
     void fill(Color color) {
@@ -36,13 +44,17 @@ public class Board {
     addRows(height);
   }
 
+  public int getWidth() {
+    return width;
+  }
+
+  public Row getFirstRow() {
+    return headRow.next;
+  }
+
   public void reset() {
     headRow.next = null;
     addRows(height);
-  }
-
-  public int getWidth() {
-    return width;
   }
 
   public boolean isConflict(Shape shape, Point origin) {

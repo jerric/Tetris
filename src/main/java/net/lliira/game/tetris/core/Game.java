@@ -6,19 +6,23 @@ import net.lliira.game.tetris.core.shape.ShapeI;
 
 import java.awt.*;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
+import java.util.function.Consumer;
 
 public class Game {
   private static final int BUFFER_SIZE = 3;
+  private static final long FULL_ROW_SLEEP = 500;
 
   private final ShapeFactory shapeFactory;
   private final SpeedPolicy speedPolicy;
   private final ScorePolicy scorePolicy;
   private final Board board;
-  private final Queue<Shape> nextShapes;
+  private final LinkedList<Shape> nextShapes;
+  private final GameStats stats;
+  private final List<Consumer<GameStats>> gameStatsListeners;
   private Shape shape;
   private Point origin;
-  private GameStats stats;
 
   public Game(int width, int height) {
     this(
@@ -41,6 +45,31 @@ public class Game {
     board = new Board(width, height);
     nextShapes = new LinkedList<>();
     stats = new GameStats();
+    gameStatsListeners = new LinkedList<>();
+  }
+
+  public void registerGameStatsListener(Consumer<GameStats> listener) {
+    gameStatsListeners.add(listener);
+  }
+
+  public GameStats getStats() {
+    return stats;
+  }
+
+  public Shape getShape() {
+    return shape;
+  }
+
+  public Point getShapeOrigin() {
+    return origin;
+  }
+
+  public Board getBoard() {
+    return board;
+  }
+
+  public List<Shape> getNextShapes() {
+    return nextShapes;
   }
 
   public void reset() {
@@ -49,53 +78,19 @@ public class Game {
     shape = null;
     origin = null;
     nextShapes.clear();
+    triggerListeners();
   }
 
   public void start() {
     for (int i = 0; i < BUFFER_SIZE; i++) {
       nextShapes.offer(shapeFactory.createShape());
     }
-    run();
-  }
-
-  public boolean moveDown() {
-    if (shape == null) return false;
-    Point newOrigin = new Point(origin.x, origin.y + 1);
-    if (board.isConflict(shape, newOrigin)) {
-      placeShape();
-      return false;
-    }
-    origin = newOrigin;
-    return true;
-  }
-
-  public boolean moveLeft() {
-    if (shape == null) return false;
-    Point newOrigin = new Point(origin.x -1, origin.y);
-    if (board.isConflict(shape, newOrigin)) return false;
-    origin = newOrigin;
-    return true;
-  }
-
-  public boolean moveRight() {
-    if (shape == null) return false;
-    Point newOrigin = new Point(origin.x + 1, origin.y);
-    if (board.isConflict(shape, newOrigin)) return false;
-    origin = newOrigin;
-    return true;
-  }
-
-  public boolean rotateClockwise() {
-    if (shape == null) return false;
-    Shape newShape = shape.rotateClockwise();
-    if (board.isConflict(newShape, origin)) return false;
-    shape = newShape;
-    return true;
+    new Thread(this::run).start();
   }
 
   private void run() {
     stats.status = GameStats.Status.Running;
-    while(stats.status == GameStats.Status.Running) {
+    while (stats.status == GameStats.Status.Running) {
       if (shape == null && !newShape()) {
         // create new shape failed. game fails.
         fail();
@@ -104,15 +99,60 @@ public class Game {
         moveDown();
       }
       long speed = speedPolicy.nextSpeed(stats);
-        try {
-            Thread.sleep(speed);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+      try {
+        Thread.sleep(speed);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
-  private boolean newShape() {
+  public synchronized boolean moveDown() {
+    if (shape == null) return false;
+    Point newOrigin = new Point(origin.x, origin.y + 1);
+    if (board.isConflict(shape, newOrigin)) {
+      placeShape();
+      return false;
+    }
+    origin = newOrigin;
+    triggerListeners();
+    return true;
+  }
+
+  public synchronized boolean moveLeft() {
+    if (shape == null) return false;
+    Point newOrigin = new Point(origin.x - 1, origin.y);
+    if (board.isConflict(shape, newOrigin)) return false;
+    origin = newOrigin;
+    triggerListeners();
+    return true;
+  }
+
+  public synchronized boolean moveRight() {
+    if (shape == null) return false;
+    Point newOrigin = new Point(origin.x + 1, origin.y);
+    if (board.isConflict(shape, newOrigin)) return false;
+    origin = newOrigin;
+    triggerListeners();
+    return true;
+  }
+
+  public synchronized boolean rotateClockwise() {
+    if (shape == null) return false;
+    Shape newShape = shape.rotateClockwise();
+    if (board.isConflict(newShape, origin)) return false;
+    shape = newShape;
+    triggerListeners();
+    return true;
+  }
+
+  private void triggerListeners() {
+    for (var listener : gameStatsListeners) {
+      listener.accept(stats);
+    }
+  }
+
+  private synchronized boolean newShape() {
     Shape shape = nextShapes.poll();
     nextShapes.offer(shapeFactory.createShape());
 
@@ -120,6 +160,7 @@ public class Game {
     if (board.isConflict(shape, origin)) return false;
     this.shape = shape;
     this.origin = origin;
+    triggerListeners();
     return true;
   }
 
@@ -129,15 +170,24 @@ public class Game {
     origin = null;
     stats.shapesPlaced++;
     int rows = board.markFullRows();
+    triggerListeners();
+    // Sleeps a bit for UI to catch up the rendering.
+    try {
+      Thread.sleep(FULL_ROW_SLEEP);
+    } catch (InterruptedException e) {
+      // do nothing
+    }
     if (rows > 0) {
       stats.rowsRemoved += rows;
       stats.score += scorePolicy.score(rows, stats);
       board.removeFullRows();
+      triggerListeners();
     }
   }
 
-  private void fail() {
+  private synchronized void fail() {
     board.fail();
     stats.status = GameStats.Status.Failed;
+    triggerListeners();
   }
 }

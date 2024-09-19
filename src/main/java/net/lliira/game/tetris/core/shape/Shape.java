@@ -48,4 +48,17 @@ public abstract class Shape {
     }
     return blocks;
   }
+
+  public Dimension getDimension() {
+    Point[] baseBlocks = getBaseBlocks(orientation);
+    int minx = 4, miny = 4, maxx = 0, maxy = 0;
+    for (Point block : baseBlocks) {
+      minx = Math.min(minx, block.x);
+      miny = Math.min(miny, block.y);
+      maxx = Math.max(maxx, block.x);
+      maxy = Math.max(maxy, block.y);
+    }
+    return new Dimension(maxx - minx + 1, maxy - miny + 1);
+  }
+
 }
