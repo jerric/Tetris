@@ -7,7 +7,7 @@ import java.awt.*;
 public class Board {
 
   private static final Color FULL_ROW_COLOR = Color.WHITE;
-  private static final Color FAILED_COLOR = Color.WHITE;
+  private static final Color FAILED_COLOR = Color.GRAY;
 
   public static class Row {
     private final Color[] blocks;

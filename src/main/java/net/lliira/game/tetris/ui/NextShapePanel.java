@@ -15,6 +15,7 @@ public class NextShapePanel extends JPanel {
   private final int unitSize;
 
   public NextShapePanel(Game game, int unitSize) {
+    super(true);
     this.game = game;
     this.unitSize = unitSize;
     int panelWidth = WIDTH * unitSize + MARGIN * 2;

@@ -6,7 +6,7 @@ package net.lliira.game.tetris.core;
  */
 public class AcceleratingRowSpeedPolicy implements SpeedPolicy {
     private static final long BASE_SPEED_MS = 1000;
-    private static final int ROW_INTERVAL = 15;
+    private static final int ROW_INTERVAL = 10;
 
     @Override
     public long nextSpeed(GameStats stats) {

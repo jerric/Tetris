@@ -2,10 +2,7 @@ package net.lliira.game.tetris.core;
 
 import com.google.gson.Gson;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 
 public class GameStorage {
   private static final String GAME_FILE = "lliira-tetris.json";
@@ -17,37 +14,54 @@ public class GameStorage {
   }
 
   private final Gson gson;
-  private Model model;
+  private final ScoreTracker scoreTracker;
+  private String player;
 
   public GameStorage() {
     gson = new Gson();
+    scoreTracker = new ScoreTracker();
+    try {
+      load();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  public String lastPlayer() {
-      return model.lastPlayer;
+  public String getPlayer() {
+    return player;
   }
 
-  public GameStorage lastPlayer(String player) {
-      model.lastPlayer = player;
-      return this;
+  public void setPlayer(String player) {
+    this.player = player;
   }
 
   public ScoreTracker getScoreTracker() {
-      ScoreTracker tracker = new ScoreTracker();
-      for (var score : model.highScores) {
-          tracker.record(score.player, score.score);
-      }
-      return tracker;
+    return scoreTracker;
   }
 
   public void load() throws IOException {
     File gameFile = new File(GAME_FILE);
+    scoreTracker.reset();
     if (gameFile.exists()) {
       try (FileReader reader = new FileReader(GAME_FILE)) {
         Model model = gson.fromJson(reader, Model.class);
+        player = model.lastPlayer;
+        for (var score : model.highScores) {
+          scoreTracker.record(score.player, score.score);
+        }
       }
     } else {
-      model = new Model();
+      player = DEFAULT_PLAYER;
+    }
+  }
+
+  public void save() throws IOException {
+    try (FileWriter writer = new FileWriter(GAME_FILE, false)) {
+      Model model = new Model();
+      model.lastPlayer = player;
+      model.highScores = scoreTracker.getHighScores();
+      String json = gson.toJson(model);
+      writer.write(json);
     }
   }
 }

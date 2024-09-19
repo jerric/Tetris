@@ -4,7 +4,8 @@ public class GameStats {
     public enum Status {
         NotStarted,
         Running,
-        Failed
+        Failed,
+        Exit,
     }
     public Status status = Status.NotStarted;
     public int shapesPlaced;

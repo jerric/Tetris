@@ -15,6 +15,7 @@ public class BoardPanel extends JPanel {
   private final int unitSize;
 
   public BoardPanel(Game game, int width, int height, int unitSize) {
+    super(true);
     this.game = game;
     this.unitSize = unitSize;
     int panelWidth = width * unitSize + MARGIN * 2;

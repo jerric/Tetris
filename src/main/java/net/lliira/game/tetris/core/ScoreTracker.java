@@ -29,9 +29,16 @@ public class ScoreTracker {
         // Need to revert the scores, since they are sorted from low to high.
         PlayerScore[] scores = new PlayerScore[highScores.size()];
         int idx = scores.length - 1;
-        for (PlayerScore score : highScores) {
-            scores[idx--] = score;
+
+        // Makes a copy and pop the values to maintain order
+        PriorityQueue<PlayerScore> queue = new PriorityQueue(highScores);
+        while(!queue.isEmpty()) {
+            scores[idx--] = queue.poll();
         }
         return scores;
+    }
+
+    public synchronized void reset() {
+        highScores.clear();
     }
 }

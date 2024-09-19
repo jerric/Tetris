@@ -5,6 +5,7 @@ import net.lliira.game.tetris.core.shape.ShapeFactory;
 import net.lliira.game.tetris.core.shape.ShapeI;
 
 import java.awt.*;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -21,6 +22,8 @@ public class Game {
   private final LinkedList<Shape> nextShapes;
   private final GameStats stats;
   private final List<Consumer<GameStats>> gameStatsListeners;
+  private final GameStorage storage;
+
   private Shape shape;
   private Point origin;
 
@@ -46,6 +49,8 @@ public class Game {
     nextShapes = new LinkedList<>();
     stats = new GameStats();
     gameStatsListeners = new LinkedList<>();
+    storage = new GameStorage();
+    new Thread(this::run).start();
   }
 
   public void registerGameStatsListener(Consumer<GameStats> listener) {
@@ -72,39 +77,63 @@ public class Game {
     return nextShapes;
   }
 
-  public void reset() {
+  public GameStorage getStorage() {
+    return storage;
+  }
+
+  public synchronized void start() {
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+      nextShapes.offer(shapeFactory.createShape());
+    }
+    stats.status = GameStats.Status.Running;
+    triggerListeners();
+  }
+
+  public synchronized void reset() {
     stats.reset();
     board.reset();
     shape = null;
     origin = null;
     nextShapes.clear();
+    stats.status = GameStats.Status.NotStarted;
     triggerListeners();
   }
 
-  public void start() {
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-      nextShapes.offer(shapeFactory.createShape());
-    }
-    new Thread(this::run).start();
+
+  public void exit() {
+    stats.status = GameStats.Status.Exit;
   }
 
   private void run() {
-    stats.status = GameStats.Status.Running;
-    while (stats.status == GameStats.Status.Running) {
-      if (shape == null && !newShape()) {
-        // create new shape failed. game fails.
-        fail();
-        break;
-      } else {
-        moveDown();
+    while (stats.status != GameStats.Status.Exit) {
+      long speed = 100L;
+      if (stats.status == GameStats.Status.Running) {
+        if (shape == null && !newShape()) {
+          // create new shape failed. game fails.
+          fail();
+        } else {
+          moveDown();
+        }
+        speed = speedPolicy.nextSpeed(stats);
       }
-      long speed = speedPolicy.nextSpeed(stats);
       try {
         Thread.sleep(speed);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
     }
+  }
+
+  public synchronized void fail() {
+    board.fail();
+    stats.status = GameStats.Status.Failed;
+    storage.getScoreTracker().record(storage.getPlayer(), stats.score);
+    try {
+      storage.save();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    triggerListeners();
   }
 
   public synchronized boolean moveDown() {
@@ -183,11 +212,5 @@ public class Game {
       board.removeFullRows();
       triggerListeners();
     }
-  }
-
-  private synchronized void fail() {
-    board.fail();
-    stats.status = GameStats.Status.Failed;
-    triggerListeners();
   }
 }

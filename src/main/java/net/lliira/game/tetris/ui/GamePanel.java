@@ -8,17 +8,13 @@ import java.awt.event.KeyEvent;
 
 public class GamePanel extends JPanel {
 
-  private final int width;
-  private final int height;
+
   private final NextShapePanel nextShapePanel;
   private final BoardPanel boardPanel;
   private final Game game;
 
-  public GamePanel(int width, int height, int unitSize) {
-    this.width = width;
-    this.height = height;
-    game = new Game(width, height);
-
+  public GamePanel(Game game, int width, int height, int unitSize) {
+    this.game = game;
     this.nextShapePanel = new NextShapePanel(game, unitSize);
     this.boardPanel = new BoardPanel(game, width, height, unitSize);
     this.setLayout(new BorderLayout());
@@ -34,7 +30,6 @@ public class GamePanel extends JPanel {
     keyboardManager.addKeyEventDispatcher(this::processKeyInput);
 
     game.registerGameStatsListener(_ -> repaint());
-    game.start();
   }
 
   private boolean processKeyInput(KeyEvent event) {
