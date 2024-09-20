@@ -1,4 +1,4 @@
-package net.lliira.game;
+package net.lliira.game.tetris;
 
 import net.lliira.game.tetris.ui.MainFrame;
 
